@@ -59,10 +59,13 @@ are in `tools.refused`.
 
 ### 1. The queue
 Pick the recipe from what the user asked (default: mine first, then unclaimed). Order by
-`sort_by=SLA_DEADLINE` (soonest first) by default, and say which order you used. Use `EXPOSURE_SEVERITY`,
-`REACH_COUNT` or a recency sort only when the user asks. Do not default to `EXPOSURE_SEVERITY`: most of the
-queue shares one severity (CRITICAL on crown jewels), and ties come back in internal-ID order, so its top row
-is effectively arbitrary. If the user asks for severity, say that rows within one severity are not ranked.
+`sort_by=SLA_DEADLINE` (soonest first) by default, and say which order you used. Use `RISK_SCORE`,
+`EXPOSURE_SEVERITY`, `REACH_COUNT` or a recency sort only when the user asks. When the user asks to order by
+risk score, call `find_investigations(..., sort_by=RISK_SCORE)`: it ranks by the anchored Exposure's current
+risk score, highest first, with unscored Investigations last, and each row's `exposure.riskScore` shows the
+score it was ranked on. Never re-sort rows yourself when the server can sort them. Do not default to
+`EXPOSURE_SEVERITY`: most of the queue shares one severity (CRITICAL on crown jewels), and ties come back in
+internal-ID order, so its top row is effectively arbitrary. If the user asks for severity, say that rows within one severity are not ranked.
 
 | User asks for | Calls |
 |---|---|
@@ -172,9 +175,8 @@ committed and tickets, and anything left for the user to do in Unizo (Hard-gate 
 ## Known server gaps (dev52, November 2026)
 
 - `find_investigations` has no KEV, crown-jewel or "owner is me" filters. Use `assignee_id` for mine, and the
-  `exposure.crownJewel` field and the KEV recipe above for the rest. It has no sort by Exposure risk score
-  (GCR) either, and `EXPOSURE_SEVERITY` ties come back in internal-ID order, so the skill defaults to
-  `SLA_DEADLINE`.
+  `exposure.crownJewel` field and the KEV recipe above for the rest. `EXPOSURE_SEVERITY` ties come back in
+  internal-ID order, so the skill defaults to `SLA_DEADLINE`.
 - `find_exposures(kev_listed=true, crown_jewel=true)` returns nothing, even though KEV-listed rows carry
   `crownJewel: true`. Do not combine the two filters. Filter on the row field and say you did.
 - `redraft_plan` is not deployed yet; use the `reengage_investigation` fallback in step 5.

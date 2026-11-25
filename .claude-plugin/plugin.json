@@ -1,6 +1,6 @@
 {
   "name": "unizo",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Unizo toolkit for Claude Code: commands, skills, and agents for exposure management workflows.",
   "icon": "./.claude-plugin/icon.png",
   "author": {
