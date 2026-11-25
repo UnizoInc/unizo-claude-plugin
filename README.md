@@ -29,7 +29,7 @@ through each Investigation in this order:
 
 | Step | What happens | Changes Unizo? |
 |---|---|---|
-| 1. Queue | Lists Investigations awaiting review, soonest SLA deadline first, with the total and the filter used. Pass `mine` (default), `unclaimed`, `crown` (Exposure reaches a crown jewel), `kev` (CVE on the CISA KEV list), or an Investigation ID to go straight to it | No |
+| 1. Queue | Lists Investigations awaiting review, highest Exposure risk score first (equal scores soonest SLA deadline first), with the total and the filter used. Pass `mine` (default), `unclaimed`, `crown` (Exposure reaches a crown jewel), `kev` (CVE on the CISA KEV list), or an Investigation ID to go straight to it | No |
 | 2. Read | Shows state, SLA and origin, then **checks the attack path is still live** (no active path, stale source data, owner flags such as a terminated employee) before any plan. Then shows every plan drafted by Unizo, its actions, gate levels, ticket drafts and where tickets would go. Path, risk and blast-radius detail on request | No |
 | 3. Take | Claims the Investigation for you, only once you decide to work it | Yes, asks first |
 | 4. Weigh | Compares the plans side by side (fix or compensating control, risk reduction, what else it resolves, operational impact, gates, residual risk) and gives a recommendation. You decide | No |

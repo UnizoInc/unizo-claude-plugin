@@ -15,7 +15,7 @@ you haven't seen listed or loaded.
 
 | Step | Tool | Notes |
 |---|---|---|
-| 1. The queue | `find_investigations` | Awaiting review; mine or unclaimed; crown jewel; KEV; soonest SLA first |
+| 1. The queue | `find_investigations` | Awaiting review; mine or unclaimed; crown jewel; KEV; highest risk score first, ties soonest SLA |
 | 2. Read it | `get_investigation` + `get_exposure` → more `get_exposure` detail as needed | Is the path still live? Then every plan and action. Reading needs no ownership |
 | 3. Take it | `assign_investigation` | Only once the user decides to work it. Required before re-draft or commit, never before the read |
 | 4. Weigh the plans | (the agent) | Side by side from what `get_investigation` returned; `preview_commit` per candidate if useful |
@@ -59,13 +59,17 @@ are in `tools.refused`.
 
 ### 1. The queue
 Pick the recipe from what the user asked (default: mine first, then unclaimed). Order by
-`sort_by=SLA_DEADLINE` (soonest first) by default, and say which order you used. Use `RISK_SCORE`,
-`EXPOSURE_SEVERITY`, `REACH_COUNT` or a recency sort only when the user asks. When the user asks to order by
-risk score, call `find_investigations(..., sort_by=RISK_SCORE)`: it ranks by the anchored Exposure's current
-risk score, highest first, with unscored Investigations last, and each row's `exposure.riskScore` shows the
-score it was ranked on. Never re-sort rows yourself when the server can sort them. Do not default to
-`EXPOSURE_SEVERITY`: most of the queue shares one severity (CRITICAL on crown jewels), and ties come back in
-internal-ID order, so its top row is effectively arbitrary. If the user asks for severity, say that rows within one severity are not ranked.
+`sort_by=RISK_SCORE` by default, and say which order you used. Pass it explicitly rather than relying on the
+server's default. It ranks by the anchored Exposure's current risk score (GCR), highest first, with unscored
+Investigations last. The score is capped at 100 and most crown-jewel Exposures sit there, so the server breaks
+equal scores by soonest SLA deadline; say so when the top rows share a score. Each row's `exposure.riskScore`
+shows the score it was ranked on.
+
+Use `SLA_DEADLINE`, `EXPOSURE_SEVERITY`, `REACH_COUNT` or a recency sort only when the user asks. Never re-sort
+rows yourself when the server can sort them. If the server refuses `RISK_SCORE` (an older deployment), fall back
+to `SLA_DEADLINE` and tell the user. Do not use `EXPOSURE_SEVERITY` as a fallback: most of the queue shares one
+severity (CRITICAL on crown jewels), and ties come back in internal-ID order, so its top row is effectively
+arbitrary. If the user asks for severity, say that rows within one severity are not ranked.
 
 | User asks for | Calls |
 |---|---|
@@ -74,10 +78,11 @@ internal-ID order, so its top row is effectively arbitrary. If the user asks for
 | Crown jewels only | Either of the above, then keep rows where `exposure.crownJewel` is true |
 | KEV only | `find_exposures(kev_listed=true, has_open_investigation=true, severity=<if asked>)` (page through), then `find_investigations(exposure_id=<displayId>, state=AWAITING_REVIEW)` for each row, keeping rows owned by the user or unclaimed. Add crown jewel by keeping rows where the exposure's `crownJewel` is true |
 
-Show at most 10 rows as a table: Investigation, Exposure (ID and short title), severity, crown jewel, SLA
-deadline and whether it is breached, owner or "Unclaimed", origin (Manual, Auto-Triage, Run). State the total
-from `pagination.total` with its filter and order, e.g. "7,568 awaiting review and unclaimed; showing the 10
-with the soonest SLA deadline". Then offer to read the first, or ask which one.
+Show at most 10 rows as a table: Investigation, Exposure (ID and short title), risk score, severity, crown
+jewel, SLA deadline and whether it is breached, owner or "Unclaimed", origin (Manual, Auto-Triage, Run). State
+the total from `pagination.total` with its filter and order, e.g. "7,568 awaiting review and unclaimed; showing
+the 10 with the highest risk score, equal scores soonest SLA deadline first". Then offer to read the first, or
+ask which one.
 
 ### 2. Read it
 No ownership needed. Call `get_investigation(investigation_id)` and `get_exposure(exposure_id)` (summary, no
@@ -175,8 +180,10 @@ committed and tickets, and anything left for the user to do in Unizo (Hard-gate 
 ## Known server gaps (dev52, November 2026)
 
 - `find_investigations` has no KEV, crown-jewel or "owner is me" filters. Use `assignee_id` for mine, and the
-  `exposure.crownJewel` field and the KEV recipe above for the rest. `EXPOSURE_SEVERITY` ties come back in
-  internal-ID order, so the skill defaults to `SLA_DEADLINE`.
+  `exposure.crownJewel` field and the KEV recipe above for the rest.
+- `RISK_SCORE` sorts on the stored score, which is capped at 100, so it cannot tell apart Exposures that all
+  read 100; the SLA deadline is what orders them. The uncapped score is only in `get_exposure(detail=[risk])`
+  (`riskBreakdown.riskRaw`). Read it there when the user needs to compare rows tied at 100.
 - `find_exposures(kev_listed=true, crown_jewel=true)` returns nothing, even though KEV-listed rows carry
   `crownJewel: true`. Do not combine the two filters. Filter on the row field and say you did.
 - `redraft_plan` is not deployed yet; use the `reengage_investigation` fallback in step 5.
